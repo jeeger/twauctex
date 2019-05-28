@@ -7,7 +7,8 @@ write LaTeX. More precisely, it does the following:
 * Supresses unescaped underscores and ampersands.
 * Adds a command to compress and align tables (Bound to `C-x f` by
 default).
-* Adds intersentence space when a sentence ends with capital letters.
+* Adds intersentence space when a sentence ends with capital letters,
+  adds interword space after abbreviations like et al. or PhD.
 
 ## Features
 
@@ -45,7 +46,7 @@ it will align all the `&`s. If passed an argument via `C-u C-c f`, the
 table will first be compressed by removing all spaces before column
 separators, and then realign the table.
 
-### Intersentence space where required.
+### Intersentence and interword spacing where required.
 
 As `chktex` is fond of reminding you, if you end a sentence with
 capital letters, TeX might think you're using an abbreviation, and
