@@ -43,6 +43,8 @@
 
 (defcustom twauctex-insert-sentence-spacing t "Whether twauctex should automatically insert an intersentence spacing macro before a dot at sentence end." :type 'boolean :group 'twauctex :safe 'booleanp)
 
+(defcustom twauctex-insert-word-spacing t "Whether twauctex should automatically insert an interword spacing macro before a dot at one of the suppressed words." :type 'boolean :group 'twauctex :safe 'booleanp)
+
 (defcustom twauctex-non-break-abbrevs '("al."	;et al.
 				       "PhD."
 				       "etc."
@@ -152,9 +154,9 @@ was broken, supress the space after the sentence ending
 character. If ARG is passed, insert a simple non-electric space."
   (interactive "p")
   (cond
-   ((> arg 1)
-    (self-insert-command 1))
+   ((> arg 1) (self-insert-command 1))
    ((and (bolp) (eq last-command 'twauctex-electric-sentence-end-char)))    ;; Do nothing
+   ((and twauctex-insert-word-spacing (twauctex-looking-at-abbrev)) (insert "\\ "))
    (t (self-insert-command 1))))
 
 
