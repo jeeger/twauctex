@@ -25,7 +25,7 @@
   "In which environments the period should be electric."
   :type '(repeat string) :group 'twauctex :safe 'listp)
 
-(defcustom twauctex-inhibited-electric-macros '("url" "texttt")
+(defcustom twauctex-inhibited-electric-macros '("url" "texttt" "cite")
   "For which TeX macros the electric period should be disabled."
   :type '(repeat string) :group 'twauctex :safe 'listp)
 
@@ -34,7 +34,7 @@
   :type '(repeat string) :group 'twauctex
   :safe 'listp)
 
-(defcustom twauctex-electric-chars '(?\. ?\? ?\! ?\:) "Which sentence end characters should be electrified to start a new line." :type '(repeat character) :group 'twauctex)
+(defcustom twauctex-electric-chars '(?\. ?\? ?\!) "Which sentence end characters should be electrified to start a new line." :type '(repeat character) :group 'twauctex)
 
 (defcustom twauctex-table-environments '("align" "tabular" "matrix" "bmatrix")
   "In which environments should we not escape the ampersand?"
@@ -88,7 +88,10 @@
       (progn
 	(delete-char -2)
 	(self-insert-command 1))
-    (if (or (or (> arg 1) (texmathp)))
+    (if (or (> arg 1)
+	    (texmathp)
+	    (member (TeX-current-macro) twauctex-inhibited-electric-macros)
+	    (TeX-in-comment))
 	(self-insert-command 1)
       (insert "\\_"))))
 
@@ -135,13 +138,13 @@ in `twauctex-inhibited-electric-macros'."
 	(progn
 	  (when (and repeated (bolp))
 	    (delete-char -2))			; Delete the newline and the dot before that.
+	  (self-insert-command 1)
 	  (when (and (equal (this-command-keys) ".")	; Automatically insert inter-sentence spacing in relevant contexts (i.e. capital letter before period.
 		     (save-excursion
-		       (backward-char)
+		       (backward-char 2)
 		       (looking-at "[A-Z]"))
 		     twauctex-insert-sentence-spacing)
 	    (insert "\\@"))
-	  (self-insert-command 1)
 	  (unless repeated
 	    (newline)))
       (self-insert-command 1))))
@@ -155,6 +158,7 @@ character. If ARG is passed, insert a simple non-electric space."
   (interactive "p")
   (cond
    ((> arg 1) (self-insert-command 1))
+   ((eq (char-before) ? ))
    ((and (bolp) (eq last-command 'twauctex-electric-sentence-end-char)))    ;; Do nothing
    ((and twauctex-insert-word-spacing (twauctex-looking-at-abbrev)) (insert "\\ "))
    (t (self-insert-command 1))))
