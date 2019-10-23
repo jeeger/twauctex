@@ -45,13 +45,12 @@
 
 (defcustom twauctex-insert-word-spacing t "Whether twauctex should automatically insert an interword spacing macro before a dot at one of the suppressed words." :type 'boolean :group 'twauctex :safe 'booleanp)
 
-(defcustom twauctex-non-break-abbrevs '("al."	;et al.
+(defcustom twauctex-non-break-abbrevs '("et al."
 				       "PhD."
 				       "etc."
 				       "M.Sc."
 				       "B.Sc."
-				       "e.g."	;e.g.
-				       )
+				       "e.g.")
   "A number of abbreviations with dots that should not cause the sentence (and thus the line) to end. Must include final electric character." :type '(repeat string) :group 'twauctex :safe 'listp)
 
 
@@ -204,7 +203,7 @@ If P is provided, just call the regular fill function."
 		  (just-one-space) ;; leaves only one space, point is after it
 		  (delete-char -1) ;; delete the space
 		  (newline)        ;; and insert a newline
-		  (LaTeX-indent-line)))))) ;; I only use this in combination with late, so this makes sense
+		  (LaTeX-indent-line)))))) ;; I only use this in combination with latex, so this makes sense
       ;; otherwise do ordinary fill paragraph
       (fill-paragraph P))))
 
