@@ -50,7 +50,8 @@
 				       "etc."
 				       "M.Sc."
 				       "B.Sc."
-				       "e.g.")
+				       "e.g."
+				       "vs.")
   "A number of abbreviations with dots that should not cause the sentence (and thus the line) to end. Must include final electric character." :type '(repeat string) :group 'twauctex :safe 'listp)
 
 
@@ -116,6 +117,23 @@ of an ampersand."
 
 (defvar twauctex--abbrev-regexp nil)
 (defvar twauctex--max-search-bound nil)
+
+(add-variable-watcher 'twauctex-non-break-abbrevs
+		      (lambda (symbol newval op where)
+			(when (eq op 'set)
+			  (setq twauctex--max-search-bound (or (cl-loop for abbrev in newval maximize (+ (length abbrev) 2))
+							       0)))))
+
+(add-variable-watcher 'twauctex-non-break-abbrevs
+		      (lambda (symbol newval op where)
+			(when (eq op 'set)
+			  (let ((split-regexp (regexp-opt (mapcar (lambda (c) (char-to-string c)) twauctex-electric-chars))))
+			    ;; Split abbreviations containing internal punctuation (like "M.Sc.").
+			    ;; We also need to match prefixes (like "M" for M.Sc.), so we don't electric-break the line when typing the abbreviation.
+			    (setq twauctex--abbrev-regexp
+				  (regexp-opt (apply #'append (mapcar (lambda (s) (split-string s split-regexp t)) newval))))))))
+
+
 
 ;; OSPL code
 
@@ -237,13 +255,6 @@ If called with ARG, or already at end of line, kill the line instead."
     (auto-fill-mode -1)
     (visual-line-mode 1)
     (set (make-local-variable 'fill-nobreak-predicate) #'twauctex-dont-break-on-nbsp)
-    (setq twauctex--max-search-bound (cl-loop for abbrev in twauctex-non-break-abbrevs maximize (+ (length abbrev) 2)))
-    (let ((split-regexp (regexp-opt (mapcar (lambda (c) (char-to-string c)) twauctex-electric-chars))))
-      ;; Split abbreviations containing internal punctuation (like "M.Sc.").
-      ;; We also need to match prefixes (like "M" for M.Sc.), so we don't electric-break the line when typing the abbreviation.
-      (setq twauctex--abbrev-regexp
-	    (regexp-opt (apply #'append (mapcar (lambda (s) (split-string s split-regexp t)) twauctex-non-break-abbrevs)))))
-
     ;; We use hack-local-variables, because we want to take the
     ;; file-local fill column into account when setting the visual
     ;; fill column.
