@@ -25,7 +25,7 @@
   "In which environments the period should be electric."
   :type '(repeat string) :group 'twauctex :safe 'listp)
 
-(defcustom twauctex-inhibited-electric-macros '("url" "texttt" "cite")
+(defcustom twauctex-inhibited-electric-macros '("url" "texttt" "cite" "todo")
   "For which TeX macros the electric period should be disabled."
   :type '(repeat string) :group 'twauctex :safe 'listp)
 
@@ -51,6 +51,7 @@
 				       "M.Sc."
 				       "B.Sc."
 				       "e.g."
+				       "i.e."
 				       "vs.")
   "A number of abbreviations with dots that should not cause the sentence (and thus the line) to end. Must include final electric character." :type '(repeat string) :group 'twauctex :safe 'listp)
 
