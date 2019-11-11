@@ -132,8 +132,8 @@ of an ampersand."
 	    (regexp-opt (apply #'append (mapcar (lambda (s) (split-string s split-regexp t)) newval)))))))
   
 
-(add-variable-watcher 'twauctex-non-break-abbrevs 'twauctex--update-max-search-bound)
-(add-variable-watcher 'twauctex-non-break-abbrevs 'twauctex--abbrev-regexp)
+(add-variable-watcher 'twauctex-non-break-abbrevs #'twauctex--update-max-search-bound)
+(add-variable-watcher 'twauctex-non-break-abbrevs #'twauctex--update-abbrev-regexp)
 
 ;; OSPL code
 
