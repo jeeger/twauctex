@@ -156,13 +156,13 @@ in `twauctex-inhibited-electric-macros'."
 	(progn
 	  (when (and repeated (bolp))
 	    (delete-char -2))			; Delete the newline and the dot before that.
-	  (self-insert-command 1)
 	  (when (and (equal (this-command-keys) ".")	; Automatically insert inter-sentence spacing in relevant contexts (i.e. capital letter before period.
 		     (save-excursion
-		       (backward-char 2)
+		       (backward-char 1)
 		       (looking-at "[A-Z]"))
 		     twauctex-insert-sentence-spacing)
 	    (insert "\\@"))
+	  (self-insert-command 1)
 	  (unless repeated
 	    (newline)))
       (self-insert-command 1))))
