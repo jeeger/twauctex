@@ -27,6 +27,9 @@ required. I've taken care to not make this too intrusive –
 functionality in certain macros, and enable them only in certain
 environments.
 
+Double-pressing the period will remove the inserted newline again, 
+thus inserting only a normal period.
+
 Additionally, twauctex has a feature to not break when entering common
 abbreviations (such as M.Sc.).
 
