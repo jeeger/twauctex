@@ -168,14 +168,17 @@ in `twauctex-inhibited-electric-macros'."
            at-electric
            (not (TeX-in-comment)))
       ;; Inter-sentence space when the last character before the sentence is a capital character.
-      (when at-lastupper
+      (when (and
+             at-lastupper
+             twauctex-insert-sentence-spacing)
         (backward-char 1)
         (insert "\\@")
         (forward-char 1))
       (newline))
      ;; Inter-word space when we are at an abbreviation.
      ((and at-abbrev
-           at-electric)
+           at-electric
+           twauctex-insert-word-spacing)
       (insert "\\ "))
       (t (self-insert-command 1)))))
 
