@@ -104,7 +104,7 @@ of an ampersand."
   (interactive "p")
   (if (eq last-command 'twauctex-ampersand-maybe)
       (progn
-	(delete-char -1)
+	(delete-char -2)
 	(self-insert-command 1))
     (if (or (> arg 1) (member (LaTeX-current-environment) twauctex-table-environments))
 	(self-insert-command 1)
