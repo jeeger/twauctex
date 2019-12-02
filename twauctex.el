@@ -46,13 +46,13 @@
 (defcustom twauctex-insert-word-spacing t "Whether twauctex should automatically insert an interword spacing macro before a dot at one of the suppressed words." :type 'boolean :group 'twauctex :safe 'booleanp)
 
 (defcustom twauctex-non-break-abbrevs '("et al."
-				       "PhD."
-				       "etc."
-				       "M.Sc."
-				       "B.Sc."
-				       "e.g."
-				       "i.e."
-				       "vs.")
+                                        "PhD."
+                                        "etc."
+                                        "M.Sc."
+                                        "B.Sc."
+                                        "e.g."
+                                        "i.e."
+                                        "vs.")
   "A number of abbreviations with dots that should not cause the sentence (and thus the line) to end. Must include final electric character." :type '(repeat string) :group 'twauctex :safe 'listp)
 
 
@@ -126,78 +126,69 @@ of an ampersand."
 
 (defun twauctex--update-abbrev-regexp (symbol newval op where)
   (when (eq op 'set)
-    (let ((split-regexp (regexp-opt (mapcar (lambda (c) (char-to-string c)) twauctex-electric-chars))))
-      ;; Split abbreviations containing internal punctuation (like "M.Sc.").
-      ;; We also need to match prefixes (like "M" for M.Sc.), so we don't electric-break the line when typing the abbreviation.
-      (setq twauctex--abbrev-regexp
-	    (regexp-opt (apply #'append (mapcar (lambda (s) (split-string s split-regexp t)) newval)))))))
-  
+    (setq twauctex--abbrev-regexp
+          (regexp-opt newval))))
+
+(defun twauctex--update-electric-regexp (symbol newval op where)
+  (when (eq op 'set)
+    (setq twauctex--electric-regexp
+          (regexp-opt (mapcar #'char-to-string twauctex-electric-chars)))))
 
 (add-variable-watcher 'twauctex-non-break-abbrevs #'twauctex--update-max-search-bound)
 (add-variable-watcher 'twauctex-non-break-abbrevs #'twauctex--update-abbrev-regexp)
+(add-variable-watcher 'twauctex-electric-chars #'twauctex--update-electric-regexp)
 
 ;; OSPL code
 
-(defun twauctex-electric-sentence-end-char (arg)
-"Insert the electric character and break for a new line.
+(defun twauctex-electric-sentence-end-space (arg)
+  "Insert a new line if the last character was in `twauctex-electric-chars' 
+and we did not detect an abbreviation.
 
-If ARG is given, insert a character without breaking the line. If
-the command is repeated, delete the inserted line break.
+If ARG is given, insert a space without breaking the line. If the
+command is repeated, delete the inserted line break.
 
 Behavior only takes place in environments defined in
 `twauctex-electric-environments' when not in a macro contained
 in `twauctex-inhibited-electric-macros'."
   (interactive "p")
-  (let ((repeated (or (> arg 1) (eq last-command 'twauctex-electric-sentence-end-char)))
+  (let* ((case-fold-search nil)
+        (repeated (or (> arg 1) (eq last-command 'twauctex-electric-sentence-end-space)))
 	(in-environment (member (LaTeX-current-environment) twauctex-electric-environments))
 	(inhibited-macro (member (TeX-current-macro) twauctex-inhibited-electric-macros))
-	(case-fold-search nil))
-    (if (and in-environment (not inhibited-macro) (not (twauctex-looking-at-abbrev t)) (not (TeX-in-comment)))
-	(progn
-	  (when (and repeated (bolp))
-	    (delete-char -2))			; Delete the newline and the dot before that.
-	  (when (and (equal (this-command-keys) ".")	; Automatically insert inter-sentence spacing in relevant contexts (i.e. capital letter before period.
-		     (save-excursion
-		       (backward-char 1)
-		       (looking-at "[A-Z]"))
-		     twauctex-insert-sentence-spacing)
-	    (insert "\\@"))
-	  (self-insert-command 1)
-	  (unless repeated
-	    (newline)))
-      (self-insert-command 1))))
-
-(defun twauctex-electric-space (arg)
-  "Ignore extraneous typed spaces.
-
-When the command before this was an electric space and the line
-was broken, supress the space after the sentence ending
-character. If ARG is passed, insert a simple non-electric space."
-  (interactive "p")
-  (cond
-   ((> arg 1) (self-insert-command 1))
-   ((eq (char-before) ? ))
-   ((and (bolp) (eq last-command 'twauctex-electric-sentence-end-char)))    ;; Do nothing
-   ((and twauctex-insert-word-spacing (twauctex-looking-at-abbrev)) (insert "\\ "))
-   (t (self-insert-command 1))))
-
+        (at-abbrev (twauctex-looking-at-abbrev))
+        (at-electric (looking-back twauctex--electric-regexp 1))
+        (at-lastupper (looking-back (concat "[[:upper:]]" twauctex--electric-regexp) 5)))
+    (cond
+     ((and repeated (bolp))
+      (delete-char -1)
+      (self-insert-command 1))
+     ((and in-environment
+           (not inhibited-macro)
+           (not at-abbrev)
+           at-electric
+           (not (TeX-in-comment)))
+      ;; Inter-sentence space when the last character before the sentence is a capital character.
+      (when at-lastupper
+        (backward-char 1)
+        (insert "\\@")
+        (forward-char 1))
+      (newline))
+     ;; Inter-word space when we are at an abbreviation.
+     ((and at-abbrev
+           at-electric)
+      (insert "\\ "))
+      (t (self-insert-command 1)))))
 
 (defun LaTeX-limited-auto-fill ()
   "Function to suppress auto fill when in an environment in `twauctex-inhibited-auto-fill-environments'."
   (when (not (member (LaTeX-current-environment) twauctex-inhibited-auto-fill-environments))
     (do-auto-fill)))
 
-
-(defun twauctex-looking-at-abbrev (&optional electric-char)
-  "Whether we are looking at an abbreviation in `twauctex-non-break-abbrevs'.
-
-If ELECTRIC-CHAR is provided, don't try to match the
-abbreviation with an ending dot. This is useful for checking
-whether to break the line on an electric period. To use in
-auto-fill, ELECTRIC-CHAR is nil."
+(defun twauctex-looking-at-abbrev ()
+  "Whether we are looking at an abbreviation in `twauctex-non-break-abbrevs'."
   ;; If we have to search backwards for longer than the longest abbrevation for a space, it's not an abbrevation.
   (looking-back
-   (concat "\\<" twauctex--abbrev-regexp (if electric-char "\\=" "\\.")) (- (point) twauctex--max-search-bound)))
+   (concat "\\<" twauctex--abbrev-regexp) (- (point) twauctex--max-search-bound)))
 
 ;; Modified version from http://www.cs.au.dk/~abizjak/emacs/2016/03/06/latex-fill-paragraph.html
 (defun twauctex-fill-ospl (&optional P)
@@ -244,13 +235,11 @@ If called with ARG, or already at end of line, kill the line instead."
 (define-minor-mode twauctex-mode "Extend latex mode to make it easier to write one sentence per line. Makes sentence-end characters (.?!:) electric to insert a newline, and supresses spaces at the beginning of the line."
   nil
   " twauc"
-  (append
-   (list (cons (kbd "SPC") #'twauctex-electric-space)
-	 (cons (kbd "_") #'twauctex-underscore-maybe)
-	 (cons (kbd "&") #'twauctex-ampersand-maybe)
-	 (cons (kbd "C-c f") #'twauctex-align-environment)
-	 (cons (kbd "M-q") #'twauctex-fill-ospl))
-   (mapcar (lambda (key) (cons (kbd (char-to-string key)) #'twauctex-electric-sentence-end-char)) twauctex-electric-chars))
+  (list (cons (kbd "_") #'twauctex-underscore-maybe)
+        (cons (kbd "&") #'twauctex-ampersand-maybe)
+        (cons (kbd "C-c f") #'twauctex-align-environment)
+        (cons (kbd "M-q") #'twauctex-fill-ospl)
+        (cons (kbd "SPC") #'twauctex-electric-sentence-end-space))
   (when twauctex-mode
     ;; Activating
     (auto-fill-mode -1)
@@ -258,6 +247,7 @@ If called with ARG, or already at end of line, kill the line instead."
     (set (make-local-variable 'fill-nobreak-predicate) #'twauctex-dont-break-on-nbsp)
     (twauctex--update-abbrev-regexp nil twauctex-non-break-abbrevs 'set nil)
     (twauctex--update-max-search-bound nil twauctex-non-break-abbrevs 'set nil)
+    (twauctex--update-electric-regexp nil twauctex-electric-chars 'set nil)
     ;; We use hack-local-variables, because we want to take the
     ;; file-local fill column into account when setting the visual
     ;; fill column.
@@ -271,8 +261,8 @@ If called with ARG, or already at end of line, kill the line instead."
     (twauctex-mode 1)))
 
 (defun twauctex-global-mode ()
-    "Automatically turn on twauctex mode in all LaTeX buffers."
-    (interactive)
+  "Automatically turn on twauctex mode in all LaTeX buffers."
+  (interactive)
   (cl-pushnew #'twauctex-enable LaTeX-mode-hook))
 
 (provide 'twauctex)
