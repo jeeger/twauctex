@@ -34,7 +34,7 @@
   :type '(repeat string) :group 'twauctex
   :safe 'listp)
 
-(defcustom twauctex-electric-chars '(?\. ?\? ?\!) "Which sentence end characters should be electrified to start a new line." :type '(repeat character) :group 'twauctex)
+(defcustom twauctex-electric-regexes '("\\." "\\?" "!") "Which regexes should end a sentence." :type '(repeat string) :group 'twauctex)
 
 (defcustom twauctex-table-environments '("align" "tabular" "matrix" "bmatrix")
   "In which environments should we not escape the ampersand?"
@@ -43,7 +43,7 @@
 
 (defcustom twauctex-insert-sentence-spacing t "Whether twauctex should automatically insert an intersentence spacing macro before a dot at sentence end." :type 'boolean :group 'twauctex :safe 'booleanp)
 
-(defcustom twauctex-insert-word-spacing t "Whether twauctex should automatically insert an interword spacing macro before a dot at one of the suppressed words." :type 'boolean :group 'twauctex :safe 'booleanp)
+(defcustom twauctex-insert-word-spacing t "Whether twauctex should automatically insert an interword spacing macro before a dot when an abbreviation is detected." :type 'boolean :group 'twauctex :safe 'booleanp)
 
 (defcustom twauctex-non-break-abbrevs '("et al."
                                         "PhD."
@@ -53,7 +53,9 @@
                                         "e.g."
                                         "i.e."
                                         "vs.")
-  "A number of abbreviations with dots that should not cause the sentence (and thus the line) to end. Must include final electric character." :type '(repeat string) :group 'twauctex :safe 'listp)
+  "A number of case sensitive abbreviations with dots that should not cause the sentence (and thus the line) to end. Must include final electric character." :type '(repeat string) :group 'twauctex :safe 'listp)
+
+(defcustom twauctex-max-lookback 1 "How far twauctex should look backwards to try and match a sentence ending. Calculate this from the longest possible match to `twauctex-electric-regexes'." :type 'integer)
 
 
 ;;; Code:
@@ -129,19 +131,20 @@ of an ampersand."
     (setq twauctex--abbrev-regexp
           (regexp-opt newval))))
 
+;; Join all regexes into one.
 (defun twauctex--update-electric-regexp (symbol newval op where)
   (when (eq op 'set)
     (setq twauctex--electric-regexp
-          (regexp-opt (mapcar #'char-to-string twauctex-electric-chars)))))
+          (s-join "\\|" (mapcar (lambda (regex) (concat "\\(?:" regex "\\)")) newval)))))
 
 (add-variable-watcher 'twauctex-non-break-abbrevs #'twauctex--update-max-search-bound)
 (add-variable-watcher 'twauctex-non-break-abbrevs #'twauctex--update-abbrev-regexp)
-(add-variable-watcher 'twauctex-electric-chars #'twauctex--update-electric-regexp)
+(add-variable-watcher 'twauctex-electric-regexes #'twauctex--update-electric-regexp)
 
 ;; OSPL code
 
 (defun twauctex-electric-sentence-end-space (arg)
-  "Insert a new line if the last character was in `twauctex-electric-chars' 
+  "Insert a new line if the last character was in `twauctex-electric-regexes' 
 and we did not detect an abbreviation.
 
 If ARG is given, insert a space without breaking the line. If the
@@ -156,8 +159,8 @@ in `twauctex-inhibited-electric-macros'."
 	(in-environment (member (LaTeX-current-environment) twauctex-electric-environments))
 	(inhibited-macro (member (TeX-current-macro) twauctex-inhibited-electric-macros))
         (at-abbrev (twauctex-looking-at-abbrev))
-        (at-electric (looking-back twauctex--electric-regexp 1))
-        (at-lastupper (looking-back (concat "[[:upper:]]" twauctex--electric-regexp) 5)))
+        (at-electric (looking-back twauctex--electric-regexp twauctex-max-lookback))
+        (at-lastupper (looking-back (concat "[[:upper:]]" twauctex--electric-regexp) (+ twauctex-max-lookback 1))))
     (cond
      ((and repeated (bolp))
       (delete-char -1)
@@ -250,7 +253,7 @@ If called with ARG, or already at end of line, kill the line instead."
     (set (make-local-variable 'fill-nobreak-predicate) #'twauctex-dont-break-on-nbsp)
     (twauctex--update-abbrev-regexp nil twauctex-non-break-abbrevs 'set nil)
     (twauctex--update-max-search-bound nil twauctex-non-break-abbrevs 'set nil)
-    (twauctex--update-electric-regexp nil twauctex-electric-chars 'set nil)
+    (twauctex--update-electric-regexp nil twauctex-electric-regexes 'set nil)
     ;; We use hack-local-variables, because we want to take the
     ;; file-local fill column into account when setting the visual
     ;; fill column.
