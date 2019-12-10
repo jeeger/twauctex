@@ -22,11 +22,11 @@
 (defgroup twauctex nil "Customization for twauctex" :group 'LaTeX)
 
 (defcustom twauctex-electric-environments '("document" "abstract" "frame")
-  "In which environments the period should be electric."
+  "In which environments the space key should be electric."
   :type '(repeat string) :group 'twauctex :safe 'listp)
 
 (defcustom twauctex-inhibited-electric-macros '("url" "texttt" "cite" "todo")
-  "For which TeX macros the electric period should be disabled."
+  "For which TeX macros the electric space should be disabled."
   :type '(repeat string) :group 'twauctex :safe 'listp)
 
 (defcustom twauctex-inhibited-auto-fill-environments '("tabular" "tikzpicture")
@@ -34,7 +34,10 @@
   :type '(repeat string) :group 'twauctex
   :safe 'listp)
 
-(defcustom twauctex-electric-regexes (list (sentence-end)) "Which regexes should end a sentence." :type '(repeat string) :group 'twauctex)
+(defcustom twauctex-electric-regexes (list (sentence-end))
+  "Which regexes should end a sentence.
+
+Be careful to correctly escape this!" :type '(repeat string) :group 'twauctex)
 
 (defcustom twauctex-table-environments '("align" "tabular" "matrix" "bmatrix")
   "In which environments should we not escape the ampersand?"
@@ -53,7 +56,7 @@
                                         "e.g."
                                         "i.e."
                                         "vs.")
-  "A number of case sensitive abbreviations with dots that should not cause the sentence (and thus the line) to end. Must include final electric character." :type '(repeat string) :group 'twauctex :safe 'listp)
+  "A number of case sensitive abbreviations with dots that should not cause the sentence (and thus the line) to end." :type '(repeat string) :group 'twauctex :safe 'listp)
 
 (defcustom twauctex-max-lookback 1 "How far twauctex should look backwards to try and match a sentence ending. Calculate this from the longest possible match to `twauctex-electric-regexes'." :type 'integer)
 
@@ -116,10 +119,11 @@ of an ampersand."
 ;; OSPL implementation ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;; internal variables
+;; internal variables, do not modify!
 
-(defvar twauctex--abbrev-regexp nil)
-(defvar twauctex--max-search-bound nil)
+(defvar twauctex--abbrev-regexp nil "Optimized regex to detect abbreviations. Do not modify manually.")
+(defvar twauctex--max-search-bound nil "Maximum length to search backwards for abbreviations. Length of longest abbreviation. Do not modify manually!")
+(defvar twauctex--electric-regexp nil "Alternative of all sentence-ending regexes. Is initialized from `twauctex-electric-regexes'. Do not modify manually!")
 
 (defun twauctex--update-max-search-bound (symbol newval op where)
   (when (eq op 'set)
@@ -144,7 +148,7 @@ of an ampersand."
 ;; OSPL code
 
 (defun twauctex-electric-sentence-end-space (arg)
-  "Insert a new line if the last character was in `twauctex-electric-regexes' 
+  "Insert a new line if the last character was in `twauctex-electric-regexes'
 and we did not detect an abbreviation.
 
 If ARG is given, insert a space without breaking the line. If the
