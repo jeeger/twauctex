@@ -34,7 +34,7 @@
   :type '(repeat string) :group 'twauctex
   :safe 'listp)
 
-(defcustom twauctex-electric-regexes '("\\." "\\?" "!") "Which regexes should end a sentence." :type '(repeat string) :group 'twauctex)
+(defcustom twauctex-electric-regexes (list (sentence-end)) "Which regexes should end a sentence." :type '(repeat string) :group 'twauctex)
 
 (defcustom twauctex-table-environments '("align" "tabular" "matrix" "bmatrix")
   "In which environments should we not escape the ampersand?"
