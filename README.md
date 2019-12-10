@@ -20,15 +20,15 @@ generated from edits. This is especially useful when collaborating on
 a LaTeX document (and everyone uses OSPL).
 
 This works by changing the fill function to work on sentences, and
-making sentence-ending characters electric to insert a line break when
+making the "space" key electric electric to insert a line break when
 required. I've taken care to not make this too intrusive –
 `twauctex-electric-environments` and
 `twauctex-inhibited-electric-macros` allow you to disable the electric
 functionality in certain macros, and enable them only in certain
 environments.
 
-Double-pressing the period will remove the inserted newline again, 
-thus inserting only a normal period.
+Double-pressing the space will remove the inserted newline again, 
+thus inserting only a normal space.
 
 Additionally, twauctex has a feature to not break when entering common
 abbreviations (such as M.Sc.).
@@ -42,7 +42,7 @@ macro where they have special meaning (such as `matrix` or `align`).
 
 ### Compressing and aligning tables
 
-It's very annoying to manually align tables, and remembering the
+It's annoying to manually align tables, and remembering the
 correct syntax for `align` is a chore. Thus, I've added two commands
 that make aligning tables a bit easier. Bound to `C-c f` by default,
 it will align all the `&`s. If passed an argument via `C-u C-c f`, the
@@ -55,7 +55,8 @@ As `chktex` is fond of reminding you, if you end a sentence with
 capital letters, TeX might think you're using an abbreviation, and
 might not space the sentence correctly. twauctex tries to rectify this
 by checking for this case (with all the bells and whistles mentioned
-above) and automatically inserting the `\@` when required.
+above) and automatically inserting the `\@` when required. Additionally,
+twauctex will insert inter-word space `\ ` when it's detected an abbreviation.
 
 ## Installation
 
@@ -74,7 +75,7 @@ could be difficult. For now, it's a hard requirement.
 ## Usage
 
 Simply write your latex as you would normally. twauctex will take care
-of breaking the line whenever you enter a sentence-ending character.
+of breaking the line whenever you enter a space after a sentence end.
 If the standard settings do not agree with you, use `(customize-group
 'twauctex)`, and you can customize the builtin configuration.
 
