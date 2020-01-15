@@ -29,7 +29,7 @@
   "For which TeX macros the electric period should be disabled."
   :type '(repeat string) :group 'twauctex :safe 'listp)
 
-(defcustom twauctex-inhibited-auto-fill-environments '("tabular" "tikzpicture")
+(defcustom twauctex-inhibited-auto-fill-environments '("tabular" "tikzpicture" "todo")
   "For which LaTeX environments not to run fill."
   :type '(repeat string) :group 'twauctex
   :safe 'listp)
@@ -206,6 +206,7 @@ auto-fill, ELECTRIC-CHAR is nil."
 If P is provided, just call the regular fill function."
   (interactive "P")
   (when (and (not (member (LaTeX-current-environment) twauctex-inhibited-auto-fill-environments))
+             (not (member (TeX-current-macro) twauctex-inhibited-electric-macros))
 	     (not (and (bolp) (eolp))))
     (if (not P)
 	(save-excursion
@@ -262,7 +263,8 @@ If called with ARG, or already at end of line, kill the line instead."
     ;; file-local fill column into account when setting the visual
     ;; fill column.
     (add-hook 'hack-local-variables-hook
-	      (lambda () (visual-fill-column-mode 1))
+	      (lambda ()
+                (visual-fill-column-mode 1))
 	      nil t)))
 
 (defun twauctex-enable ()
