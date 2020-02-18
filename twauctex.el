@@ -68,23 +68,22 @@ Be careful to correctly escape this!" :type '(repeat string) :group 'twauctex)
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;; Aligning tables
-(defun twauctex-align-environment (arg)
+(defun twauctex-align-table (arg)
   "Align the current environment as a table. If ARG is passed, collapse the table before aligning."
   (interactive "p")
   (when (> arg 1)
     (twauctex-collapse-table))
   (save-mark-and-excursion
     (LaTeX-mark-environment)
-    (align-regexp (region-beginning) (region-end) "\\(\\s-*\\)\\&" 1 1 t)))
+    (align-regexp (region-beginning) (region-end) (rx (and (group (+? space)) (or ?& "\\\\"))) 1 1 t)))
 
 (defun twauctex-collapse-table ()
-  "Collapse the table by deleting multiple spaces after the column identifier."
+  "Collapse the table by deleting multiple spaces before and after the column identifier."
   (interactive)
   (save-mark-and-excursion
     (LaTeX-mark-environment)
-    ;; Avert your eyes lest you contract leaning toothpick syndrome.
-    (while (re-search-forward "[[:space:]]+\\(&\\|\\\\\\\\\\)[[:space:]]+" (region-end) t)
-      (replace-match " \\1 "))))
+    (while (re-search-forward (rx (and (* space) ?& (group (? space)) (* space))) (region-end) t)
+      (replace-match " &\\1"))))
 
 ;; Use correct escaping for underscore
 (defun twauctex-underscore-maybe (arg)
@@ -248,7 +247,7 @@ If called with ARG, or already at end of line, kill the line instead."
   " twauc"
   (list (cons (kbd "_") #'twauctex-underscore-maybe)
         (cons (kbd "&") #'twauctex-ampersand-maybe)
-        (cons (kbd "C-c f") #'twauctex-align-environment)
+        (cons (kbd "C-c f") #'twauctex-align-table)
         (cons (kbd "M-q") #'twauctex-fill-ospl)
         (cons (kbd "SPC") #'twauctex-electric-sentence-end-space))
   (when twauctex-mode
