@@ -85,6 +85,58 @@ Be careful to correctly escape this!" :type '(repeat string) :group 'twauctex)
     (while (re-search-forward (rx (and (* space) ?& (group (? space)) (* space))) (region-end) t)
       (replace-match " &\\1"))))
 
+(defvar twauctex--old-fill-column nil "Stores old value of `fill-column' when editing a table.")
+(defvar twauctex--old-visual-fill-column-mode nil "Stores the old `visual-fill-column-mode' when editing a table.")
+(defvar twauctex--old-auto-fill-function nil "Stores the old variable `auto-fill-function' when editing a table.")
+(defvar twauctex--in-edit-table nil "Stores whether we are currently in edit-table mode.")
+(defvar twauctex--old-buffer-face-mode-face nil "Stores whether a custom face was enabled before we entered edit-table mode.")
+
+(defun twauctex-edit-table (&optional supress-autoalign)
+  "Edit a table.
+First, unset the fill column, disable visual fill column mode,
+turn off any custom face and narrow buffer to the table. Then,
+align it, unless SUPRESS-AUTOALIGN is provided. Now edit the
+table, and optionally realign. Finally, exit the table mode
+with C-c C-c."
+  (interactive "P")
+  (unless (member (LaTeX-current-environment) twauctex-table-environments)
+    (error "Only call in a table environment"))
+  (setq-local twauctex--old-fill-column fill-column)
+  (setq-local twauctex--old-visual-fill-column-mode visual-fill-column-mode)
+  (setq-local twauctex--old-auto-fill-function auto-fill-function)
+  (setq fill-column -1)
+  (setq auto-fill-function nil)
+  (visual-fill-column-mode -1)
+  (when buffer-face-mode-face
+    (setq-local twauctex--old-buffer-face-mode-face buffer-face-mode-face)
+    (buffer-face-toggle))
+  (unless supress-autoalign
+    (twauctex-align-table 0))
+  (setq-local twauctex--in-edit-table t)
+  (save-mark-and-excursion
+    (LaTeX-mark-environment)
+    (narrow-to-region (region-beginning) (region-end)))
+  (define-key twauctex-mode-map (kbd "C-c C-c") #'twauctex-exit-edit-table))
+
+(defmacro twauctex--kill-local-variables (&rest variables)
+  `(progn ,@(mapcar (lambda (var) `(kill-local-variable (quote ,var))) variables)))
+  
+(defun twauctex-exit-edit-table (&optional supress-collapse)
+  "Exit table edit mode.
+Restore all old variables, collapse the table and widen the buffer unless SUPRESS-COLLAPSE is provided."
+  (interactive "P")
+  (unless twauctex--in-edit-table
+    (error "Must be in edit table mode to call this"))
+  (when twauctex--old-fill-column (setq fill-column twauctex--old-fill-column))
+  (when twauctex--old-visual-fill-column-mode (visual-fill-column-mode twauctex--old-visual-fill-column-mode))
+  (when twauctex--old-auto-fill-function (setq auto-fill-function twauctex--old-auto-fill-function))
+  (when twauctex--old-buffer-face-mode-face (buffer-face-toggle twauctex--old-buffer-face-mode-face))
+  (twauctex--kill-local-variables twauctex--old-fill-column twauctex--old-visual-fill-column-mode twauctex--old-auto-fill-function twauctex--old-buffer-face-mode-face)
+  (define-key twauctex-mode-map (kbd "C-c C-c") nil)
+  (widen)
+  (unless supress-collapse
+    (twauctex-collapse-table)))
+
 ;; Use correct escaping for underscore
 (defun twauctex-underscore-maybe (arg)
   "Insert an underscore. Unless we are in math mode, or ARG is given, an escaped underscore is inserted, otherwise, an unescaped underscore is inserted."
@@ -247,7 +299,7 @@ If called with ARG, or already at end of line, kill the line instead."
   " twauc"
   (list (cons (kbd "_") #'twauctex-underscore-maybe)
         (cons (kbd "&") #'twauctex-ampersand-maybe)
-        (cons (kbd "C-c f") #'twauctex-align-table)
+        (cons (kbd "C-c e") #'twauctex-edit-table)
         (cons (kbd "M-q") #'twauctex-fill-ospl)
         (cons (kbd "SPC") #'twauctex-electric-sentence-end-space))
   (when twauctex-mode
