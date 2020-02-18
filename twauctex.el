@@ -75,7 +75,7 @@ Be careful to correctly escape this!" :type '(repeat string) :group 'twauctex)
     (twauctex-collapse-table))
   (save-mark-and-excursion
     (LaTeX-mark-environment)
-    (align (region-beginning) (region-end))))
+    (align-regexp (region-beginning) (region-end) "\\(\\s-*\\)\\&" 1 1 t)))
 
 (defun twauctex-collapse-table ()
   "Collapse the table by deleting multiple spaces after the column identifier."
@@ -83,8 +83,8 @@ Be careful to correctly escape this!" :type '(repeat string) :group 'twauctex)
   (save-mark-and-excursion
     (LaTeX-mark-environment)
     ;; Avert your eyes lest you contract leaning toothpick syndrome.
-    (while (re-search-forward "[[:space:]]+\\(&\\|\\\\\\\\\\)" (region-end) t)
-      (replace-match " \\1"))))
+    (while (re-search-forward "[[:space:]]+\\(&\\|\\\\\\\\\\)[[:space:]]+" (region-end) t)
+      (replace-match " \\1 "))))
 
 ;; Use correct escaping for underscore
 (defun twauctex-underscore-maybe (arg)
