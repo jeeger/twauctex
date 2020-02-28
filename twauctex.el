@@ -40,7 +40,7 @@
 Be careful to correctly escape this!" :type '(repeat string) :group 'twauctex)
 
 (defcustom twauctex-table-environments '("align" "tabular" "matrix" "bmatrix")
-  "In which environments should we not escape the ampersand?"
+  "Which environment should we treat as a table? This means that the ampersand is not escaped, and that `twauctex-edit-table' works for editing this environment."
   :type '(repeat string) :group 'twauctex
   :safe 'stringp)
 
@@ -82,15 +82,18 @@ Be careful to correctly escape this!" :type '(repeat string) :group 'twauctex)
   (interactive)
   (save-mark-and-excursion
     (LaTeX-mark-environment)
-    (while (re-search-forward (rx (and (* space) ?& (group (? space)) (* space))) (region-end) t)
-      (replace-match " &\\1"))))
+    (while (re-search-forward (rx (and (* space) (group (or ?& "\\\\")) (group (? space)) (* space))) (region-end) t)
+      (replace-match " \\1\\2"))))
 
+;; TODO: Define a function to easily save and restore these variables.
 (defvar twauctex--old-fill-column nil "Stores old value of `fill-column' when editing a table.")
 (defvar twauctex--old-visual-fill-column-mode nil "Stores the old `visual-fill-column-mode' when editing a table.")
 (defvar twauctex--old-auto-fill-function nil "Stores the old variable `auto-fill-function' when editing a table.")
 (defvar twauctex--in-edit-table nil "Stores whether we are currently in edit-table mode.")
 (defvar twauctex--old-buffer-face-mode-face nil "Stores whether a custom face was enabled before we entered edit-table mode.")
+(defvar twauctex--old-buffer-truncate-lines nil "Stores whether truncate-lines was enabled before we entered edit-table mode.")
 
+;; TODO: I should define an extra keymap for these keys, so they can be remapped.
 (defun twauctex-edit-table (&optional supress-autoalign)
   "Edit a table.
 First, unset the fill column, disable visual fill column mode,
@@ -110,13 +113,17 @@ with C-c C-c."
   (when buffer-face-mode-face
     (setq-local twauctex--old-buffer-face-mode-face buffer-face-mode-face)
     (buffer-face-toggle))
+  (unless truncate-lines
+    (setq-local twauctex--old-buffer-truncate-lines truncate-lines)
+    (toggle-truncate-lines))
   (unless supress-autoalign
     (twauctex-align-table 0))
   (setq-local twauctex--in-edit-table t)
   (save-mark-and-excursion
     (LaTeX-mark-environment)
     (narrow-to-region (region-beginning) (region-end)))
-  (define-key twauctex-mode-map (kbd "C-c C-c") #'twauctex-exit-edit-table))
+  (define-key twauctex-mode-map (kbd "C-c C-c") #'twauctex-exit-edit-table)
+  (define-key twauctex-mode-map (kbd "C-c C-a") #'twauctex-align-table))
 
 (defmacro twauctex--kill-local-variables (&rest variables)
   `(progn ,@(mapcar (lambda (var) `(kill-local-variable (quote ,var))) variables)))
@@ -131,8 +138,14 @@ Restore all old variables, collapse the table and widen the buffer unless SUPRES
   (when twauctex--old-visual-fill-column-mode (visual-fill-column-mode twauctex--old-visual-fill-column-mode))
   (when twauctex--old-auto-fill-function (setq auto-fill-function twauctex--old-auto-fill-function))
   (when twauctex--old-buffer-face-mode-face (buffer-face-toggle twauctex--old-buffer-face-mode-face))
-  (twauctex--kill-local-variables twauctex--old-fill-column twauctex--old-visual-fill-column-mode twauctex--old-auto-fill-function twauctex--old-buffer-face-mode-face)
+  (unless twauctex--old-buffer-truncate-lines (toggle-truncate-lines twauctex--old-buffer-truncate-lines))
+  (twauctex--kill-local-variables twauctex--old-fill-column
+                                  twauctex--old-visual-fill-column-mode
+                                  twauctex--old-auto-fill-function
+                                  twauctex--old-buffer-face-mode-face
+                                  twauctex--old-buffer-truncate-lines)
   (define-key twauctex-mode-map (kbd "C-c C-c") nil)
+  (define-key twauctex-mode-map (kbd "C-c C-a") nil)
   (widen)
   (unless supress-collapse
     (twauctex-collapse-table)))
