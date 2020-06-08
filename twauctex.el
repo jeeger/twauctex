@@ -315,6 +315,7 @@ If called with ARG, or already at end of line, kill the line instead."
   (and (eq major-mode 'latex-mode)
        (eq (char-before (- (point) 1)) ?\\)))
 
+;;;###autoload
 (define-minor-mode twauctex-mode "Extend latex mode to make it easier to write one sentence per line. Makes sentence-end characters (.?!:) electric to insert a newline, and supresses spaces at the beginning of the line."
   nil
   " twauc"
@@ -339,11 +340,13 @@ If called with ARG, or already at end of line, kill the line instead."
                 (visual-fill-column-mode 1))
 	      nil t)))
 
+;;;###autoload
 (defun twauctex-enable ()
   "Enable twauctex mode."
   (when (and (buffer-file-name) (equal (file-name-extension (buffer-file-name)) "tex"))
     (twauctex-mode 1)))
 
+;;;###autoload
 (defun twauctex-global-mode ()
   "Automatically turn on twauctex mode in all LaTeX buffers."
   (interactive)
