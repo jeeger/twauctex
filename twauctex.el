@@ -1,5 +1,11 @@
-;;; twauctex --- Tweaks for auctex to simplify writing latex. -*- lexical-binding: t; -*-
+;;; twauctex.el --- Tweaked auctex to write one-sentence-per-line LaTeX files
 ;;;
+;; Author: Jan Seeger <jan.seeger@thenybble.de>
+;; Keywords: languages, convenience
+;; Homepage: https://github.com/jeeger/twauctex
+;; Version: 0.0.1
+;; Package-Requires: ((emacs "26.1") (auctex "12.2.3"))
+;; 
 ;;; Commentary:
 ;;;
 ;;; This file activates some tweaks for AUCtex that makes
@@ -8,6 +14,8 @@
 ;;; underscore in non-math-mode), and helps with alignment of table
 ;;; and TikZ environments (supress auto-fill in tables and TikZ pictures,
 ;;; command to align table columns).
+;;;
+;;; Code:
 
 (require 'tex)
 (require 'latex)
@@ -61,8 +69,6 @@ Be careful to correctly escape this!" :type '(repeat string) :group 'twauctex)
 (defcustom twauctex-max-lookback 1 "How far twauctex should look backwards to try and match a sentence ending. Calculate this from the longest possible match to `twauctex-electric-regexes'." :type 'integer)
 
 
-;;; Code:
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Tweak functionality ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -87,11 +93,11 @@ Be careful to correctly escape this!" :type '(repeat string) :group 'twauctex)
 
 ;; TODO: Define a function to easily save and restore these variables.
 (defvar twauctex--old-fill-column nil "Stores old value of `fill-column' when editing a table.")
-(defvar twauctex--old-visual-fill-column-mode nil "Stores the old `visual-fill-column-mode' when editing a table.")
+(defvar twauctex--old-visual-fill-column-mode nil "Stores the old variable `visual-fill-column-mode' when editing a table.")
 (defvar twauctex--old-auto-fill-function nil "Stores the old variable `auto-fill-function' when editing a table.")
 (defvar twauctex--in-edit-table nil "Stores whether we are currently in edit-table mode.")
 (defvar twauctex--old-buffer-face-mode-face nil "Stores whether a custom face was enabled before we entered edit-table mode.")
-(defvar twauctex--old-buffer-truncate-lines nil "Stores whether truncate-lines was enabled before we entered edit-table mode.")
+(defvar twauctex--old-buffer-truncate-lines nil "Stores whether `truncate-lines' was enabled before we entered edit-table mode.")
 
 ;; TODO: I should define an extra keymap for these keys, so they can be remapped.
 (defun twauctex-edit-table (&optional supress-autoalign)
@@ -101,6 +107,8 @@ turn off any custom face and narrow buffer to the table. Then,
 align it, unless SUPRESS-AUTOALIGN is provided. Now edit the
 table, and optionally realign. Finally, exit the table mode
 with C-c C-c."
+  ;; We can't use KEYMAP here because the key is only bound in
+  ;; the minor mode.
   (interactive "P")
   (unless (member (LaTeX-current-environment) twauctex-table-environments)
     (error "Only call in a table environment"))
@@ -126,6 +134,7 @@ with C-c C-c."
   (define-key twauctex-mode-map (kbd "C-c C-a") #'twauctex-align-table))
 
 (defmacro twauctex--kill-local-variables (&rest variables)
+  "Kill all local variables in VARIABLES."
   `(progn ,@(mapcar (lambda (var) `(kill-local-variable (quote ,var))) variables)))
   
 (defun twauctex-exit-edit-table (&optional supress-collapse)
@@ -160,7 +169,6 @@ Restore all old variables, collapse the table and widen the buffer unless SUPRES
 	(self-insert-command 1))
     (if (or (> arg 1)
 	    (texmathp)
-	    (member (TeX-current-macro) twauctex-inhibited-electric-macros)
 	    (TeX-in-comment))
 	(self-insert-command 1)
       (insert "\\_"))))
@@ -190,17 +198,20 @@ of an ampersand."
 (defvar twauctex--electric-regexp nil "Alternative of all sentence-ending regexes. Is initialized from `twauctex-electric-regexes'. Do not modify manually!")
 
 (defun twauctex--update-max-search-bound (symbol newval op where)
+  "Update `twauctex--max-search-bound'  when configuration options are updated."
   (when (eq op 'set)
     (setq twauctex--max-search-bound (or (cl-loop for abbrev in newval maximize (+ (length abbrev) 2))
 					 0))))
 
 (defun twauctex--update-abbrev-regexp (symbol newval op where)
+  "Update `twauctex--abbrev-regexp'  when configuration options are updated."
   (when (eq op 'set)
     (setq twauctex--abbrev-regexp
           (regexp-opt newval))))
 
 ;; Join all regexes into one.
 (defun twauctex--update-electric-regexp (symbol newval op where)
+    "Update `twauctex--electric-regexp'  when configuration options are updated."
   (when (eq op 'set)
     (setq twauctex--electric-regexp
           (s-join "\\|" (mapcar (lambda (regex) (concat "\\(?:" regex "\\)")) newval)))))
@@ -212,8 +223,7 @@ of an ampersand."
 ;; OSPL code
 
 (defun twauctex-electric-sentence-end-space (arg)
-  "Insert a new line if the last character was in `twauctex-electric-regexes'
-and we did not detect an abbreviation.
+  "Insert a new line if the last character was electric and we did not detect an abbreviation.
 
 If ARG is given, insert a space without breaking the line. If the
 command is repeated, delete the inserted line break.
@@ -222,6 +232,7 @@ Behavior only takes place in environments defined in
 `twauctex-electric-environments' when not in a macro contained
 in `twauctex-inhibited-electric-macros'."
   (interactive "p")
+  (self-insert-command 1)
   (let* ((case-fold-search nil)
         (repeated (or (> arg 1) (eq last-command 'twauctex-electric-sentence-end-space)))
 	(in-environment (member (LaTeX-current-environment) twauctex-electric-environments))
@@ -229,6 +240,8 @@ in `twauctex-inhibited-electric-macros'."
         (at-abbrev (twauctex-looking-at-abbrev))
         (at-electric (looking-back twauctex--electric-regexp twauctex-max-lookback))
         (at-lastupper (looking-back (concat "[[:upper:]]" twauctex--electric-regexp) (+ twauctex-max-lookback 1))))
+    ;; Delete char we inserted to fool (sentence-end)
+    (delete-char -1)
     (cond
      ((and repeated (bolp))
       (delete-char -1)
@@ -251,12 +264,7 @@ in `twauctex-inhibited-electric-macros'."
            at-electric
            twauctex-insert-word-spacing)
       (insert "\\ "))
-      (t (self-insert-command 1)))))
-
-(defun LaTeX-limited-auto-fill ()
-  "Function to suppress auto fill when in an environment in `twauctex-inhibited-auto-fill-environments'."
-  (when (not (member (LaTeX-current-environment) twauctex-inhibited-auto-fill-environments))
-    (do-auto-fill)))
+     (t (self-insert-command 1)))))
 
 (defun twauctex-looking-at-abbrev ()
   "Whether we are looking at an abbreviation in `twauctex-non-break-abbrevs'."
@@ -342,4 +350,5 @@ If called with ARG, or already at end of line, kill the line instead."
   (cl-pushnew #'twauctex-enable LaTeX-mode-hook))
 
 (provide 'twauctex)
+
 ;;; twauctex.el ends here
