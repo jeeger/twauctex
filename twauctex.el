@@ -214,7 +214,7 @@ of an ampersand."
     "Update `twauctex--electric-regexp'  when configuration options are updated."
   (when (eq op 'set)
     (setq twauctex--electric-regexp
-          (s-join "\\|" (mapcar (lambda (regex) (concat "\\(?:" regex "\\)")) newval)))))
+          (s-concat "\\(?:" (s-join "\\|" (mapcar (lambda (regex) (concat "\\(?:" regex "\\)")) newval)) "\\)"))))
 
 (add-variable-watcher 'twauctex-non-break-abbrevs #'twauctex--update-max-search-bound)
 (add-variable-watcher 'twauctex-non-break-abbrevs #'twauctex--update-abbrev-regexp)
@@ -283,7 +283,8 @@ If P is provided, just call the regular fill function."
 	     (not (and (bolp) (eolp))))
     (if (not P)
 	(save-excursion
-	  (let ((fill-column most-positive-fixnum)) ;; relies on dynamic binding
+	  (let ((fill-column most-positive-fixnum) ;; relies on dynamic binding
+                (sentence-end twauctex--electric-regexp))
 	    (fill-paragraph)
 	    (let ((end (save-excursion
 			 (forward-paragraph 1)
