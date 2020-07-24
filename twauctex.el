@@ -22,6 +22,7 @@
 (require 'cl-lib)
 (require 'tex-site)
 (require 'texmathp)
+(require 's)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Customize settings ;;
