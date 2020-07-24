@@ -28,6 +28,8 @@
 ;; Customize settings ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;
 
+(defconst twauctex-version (shell-command-to-string "git rev-parse --short master"))
+
 (defgroup twauctex nil "Customization for twauctex" :group 'LaTeX)
 
 (defcustom twauctex-electric-environments '("document" "abstract" "frame")
