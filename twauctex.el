@@ -271,9 +271,11 @@ in `twauctex-inhibited-electric-macros'."
 
 (defun twauctex-looking-at-abbrev ()
   "Whether we are looking at an abbreviation in `twauctex-non-break-abbrevs'."
-  ;; If we have to search backwards for longer than the longest abbrevation for a space, it's not an abbrevation.
-  (looking-back
-   (concat "\\<" twauctex--abbrev-regexp "\s?") (- (point) twauctex--max-search-bound)))
+  ;; If we have to search backwards for longer than the longest abbrevation for a space, it's not an abbreviation.
+  (or
+   (< (length (current-word nil t)) 3)
+   (looking-back
+    (concat "\\<" twauctex--abbrev-regexp "\s?") (- (point) twauctex--max-search-bound))))
 
 ;; Modified version from http://www.cs.au.dk/~abizjak/emacs/2016/03/06/latex-fill-paragraph.html
 (defun twauctex-fill-ospl (&optional P)
