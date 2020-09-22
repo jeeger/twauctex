@@ -164,17 +164,22 @@ Restore all old variables, collapse the table and widen the buffer unless SUPRES
 
 ;; Use correct escaping for underscore
 (defun twauctex-underscore-maybe (arg)
-  "Insert an underscore. Unless we are in math mode, or ARG is given, an escaped underscore is inserted, otherwise, an unescaped underscore is inserted."
+  "Insert an underscore. If we are in math mode, or ARG is given, an unescaped underscore is inserted, otherwise, an escaped underscore is inserted. When pressed again, the escaped underscore is replaced with an unescaped one, or vice versa in math mode."
   (interactive "p")
-  (if (eq last-command 'twauctex-underscore-maybe)
-      (progn
-	(delete-char -2)
-	(self-insert-command 1))
-    (if (or (> arg 1)
-	    (texmathp)
-	    (TeX-in-comment))
-	(self-insert-command 1)
-      (insert "\\_"))))
+  (let ((repeated (eq last-command 'twauctex-underscore-maybe))
+        (in-comment (TeX-in-comment))
+        (in-math (texmathp))
+        (has-arg (> arg 1)))
+    (cond
+     ((and (or repeated has-arg) (not in-math))
+      (delete-char -2)
+      (self-insert-command 1))
+     ((and (or repeated has-arg) in-math)
+      (delete-char -1)
+      (insert "\\_"))
+     ((and (not in-comment) (not in-math))
+      (insert "\\_"))
+     (t (insert "_")))))
 
 ;; Escape ampersand if not in table environment.
 (defun twauctex-ampersand-maybe (arg)
