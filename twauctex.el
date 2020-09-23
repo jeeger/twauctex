@@ -45,6 +45,11 @@
   :type '(repeat string) :group 'twauctex
   :safe 'listp)
 
+(defcustom twauctex-inhibited-quote-environments '("tikzpicture")
+  "In which LaTeX environments the auctex quote functionality should be disabled."
+  :type '(repeat string) :group 'twauctex
+  :safe 'listp)
+
 (defcustom twauctex-electric-regexes (list (sentence-end))
   "Which regexes should end a sentence.
 
@@ -195,6 +200,13 @@ of an ampersand."
 	(self-insert-command 1)
       (insert "\\&"))))
 
+(defun twauctex-quote-maybe (arg)
+  "Call auctex's TeX-insert-quote if not in a supressed environment."
+  (interactive "*P")
+  (if (member (LaTeX-current-environment) twauctex-inhibited-quote-environments)
+      (self-insert-command 1)
+    (TeX-insert-quote arg)))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; OSPL implementation ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -276,11 +288,9 @@ in `twauctex-inhibited-electric-macros'."
 
 (defun twauctex-looking-at-abbrev ()
   "Whether we are looking at an abbreviation in `twauctex-non-break-abbrevs'."
-  ;; If we have to search backwards for longer than the longest abbrevation for a space, it's not an abbreviation.
-  (or
-   (< (length (current-word nil t)) 3)
-   (looking-back
-    (concat "\\<" twauctex--abbrev-regexp "\s?") (- (point) twauctex--max-search-bound))))
+  ;; If we have to search backwards for longer than the longest abbrevation for a space, it's not an abbrevation.
+  (looking-back
+   (concat "\\<" twauctex--abbrev-regexp "\s?") (- (point) twauctex--max-search-bound)))
 
 ;; Modified version from http://www.cs.au.dk/~abizjak/emacs/2016/03/06/latex-fill-paragraph.html
 (defun twauctex-fill-ospl (&optional P)
@@ -331,6 +341,7 @@ If called with ARG, or already at end of line, kill the line instead."
   nil
   " twauc"
   (list (cons (kbd "_") #'twauctex-underscore-maybe)
+        (cons (kbd "\"") #'twauctex-quote-maybe)
         (cons (kbd "&") #'twauctex-ampersand-maybe)
         (cons (kbd "C-c e") #'twauctex-edit-table)
         (cons (kbd "M-q") #'twauctex-fill-ospl)
