@@ -1,4 +1,4 @@
-;;; twauctex.el --- Tweaked auctex to write one-sentence-per-line LaTeX files
+;;; twauctex.el --- Tweaked auctex to write one-sentence-per-line LaTeX files  -*- lexical-binding: t; -*-
 ;;;
 ;; Author: Jan Seeger <jan.seeger@thenybble.de>
 ;; Keywords: languages, convenience
@@ -76,6 +76,8 @@ Be careful to correctly escape this!" :type '(repeat string) :group 'twauctex)
 
 (defcustom twauctex-max-lookback 1 "How far twauctex should look backwards to try and match a sentence ending. Calculate this from the longest possible match to `twauctex-electric-regexes'." :type 'integer)
 
+(defcustom twauctex-use-visual-fill-column t "Whether twauctex should automatically enable `visual-fill-column' mode when enabled. Using one-sentence-per-line mode without some sort of visual line breaking is not recommended, as the long lines are very hard to read. Alternatives to `visual-fill-column-mode' exist, so we provide this as an option should you wish to use another visual line breaking mode." :type 'boolean :group 'twauctex :safe 'booleanp)
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Tweak functionality ;;
@@ -125,7 +127,8 @@ with C-c C-c."
   (setq-local twauctex--old-auto-fill-function auto-fill-function)
   (setq fill-column -1)
   (setq auto-fill-function nil)
-  (visual-fill-column-mode -1)
+  (when twauctex-use-visual-fill-column
+    (visual-fill-column-mode -1))
   (when buffer-face-mode-face
     (setq-local twauctex--old-buffer-face-mode-face buffer-face-mode-face)
     (buffer-face-toggle))
@@ -152,7 +155,8 @@ Restore all old variables, collapse the table and widen the buffer unless SUPRES
   (unless twauctex--in-edit-table
     (error "Must be in edit table mode to call this"))
   (when twauctex--old-fill-column (setq fill-column twauctex--old-fill-column))
-  (when twauctex--old-visual-fill-column-mode (visual-fill-column-mode twauctex--old-visual-fill-column-mode))
+  (when (and twauctex-use-visual-fill-column twauctex--old-visual-fill-column-mode)
+    (visual-fill-column-mode twauctex--old-visual-fill-column-mode))
   (when twauctex--old-auto-fill-function (setq auto-fill-function twauctex--old-auto-fill-function))
   (when twauctex--old-buffer-face-mode-face (buffer-face-toggle twauctex--old-buffer-face-mode-face))
   (unless twauctex--old-buffer-truncate-lines (toggle-truncate-lines twauctex--old-buffer-truncate-lines))
@@ -359,9 +363,9 @@ If called with ARG, or already at end of line, kill the line instead."
     ;; fill column.
     (add-hook 'hack-local-variables-hook
 	      (lambda ()
-                (visual-fill-column-mode 1))
-	      nil t)))
-
+                (when twauctex-use-visual-fill-column
+                  (visual-fill-column-mode 1))
+	      nil t))))
 ;;;###autoload
 (defun twauctex-enable ()
   "Enable twauctex mode."
