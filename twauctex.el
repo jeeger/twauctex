@@ -363,7 +363,7 @@ If called with ARG, or already at end of line, kill the line instead."
     ;; fill column.
     (add-hook 'hack-local-variables-hook
 	      (lambda ()
-                (when twauctex-use-visual-fill-column
+          (when (and twauctex-use-visual-fill-column TeX-mode-p)
                   (visual-fill-column-mode 1))
 	      nil t))))
 ;;;###autoload
