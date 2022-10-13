@@ -364,8 +364,8 @@ If called with ARG, or already at end of line, kill the line instead."
     (add-hook 'hack-local-variables-hook
 	      (lambda ()
                 (when twauctex-use-visual-fill-column
-                  (visual-fill-column-mode 1))
-	      nil t))))
+                  (visual-fill-column-mode 1)))
+              nil t)))
 ;;;###autoload
 (defun twauctex-enable ()
   "Enable twauctex mode."
