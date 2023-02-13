@@ -147,7 +147,7 @@ with C-c C-c."
 (defmacro twauctex--kill-local-variables (&rest variables)
   "Kill all local variables in VARIABLES."
   `(progn ,@(mapcar (lambda (var) `(kill-local-variable (quote ,var))) variables)))
-  
+
 (defun twauctex-exit-edit-table (&optional supress-collapse)
   "Exit table edit mode.
 Restore all old variables, collapse the table and widen the buffer unless SUPRESS-COLLAPSE is provided."
@@ -235,7 +235,7 @@ of an ampersand."
 
 ;; Join all regexes into one.
 (defun twauctex--update-electric-regexp (symbol newval op where)
-    "Update `twauctex--electric-regexp'  when configuration options are updated."
+  "Update `twauctex--electric-regexp'  when configuration options are updated."
   (when (eq op 'set)
     (setq twauctex--electric-regexp
           (s-concat "\\(?:" (s-join "\\|" (mapcar (lambda (regex) (concat "\\(?:" regex "\\)")) newval)) "\\)"))))
@@ -258,12 +258,12 @@ in `twauctex-inhibited-electric-macros'."
   (interactive "p")
   (self-insert-command 1)
   (let* ((case-fold-search nil)
-        (repeated (or (> arg 1) (eq last-command 'twauctex-electric-sentence-end-space)))
-	(in-environment (member (LaTeX-current-environment) twauctex-electric-environments))
-	(inhibited-macro (member (TeX-current-macro) twauctex-inhibited-electric-macros))
-        (at-abbrev (twauctex-looking-at-abbrev))
-        (at-electric (looking-back twauctex--electric-regexp twauctex-max-lookback))
-        (at-lastupper (looking-back (concat "[[:upper:]]" twauctex--electric-regexp) (+ twauctex-max-lookback 1))))
+         (repeated (or (> arg 1) (eq last-command 'twauctex-electric-sentence-end-space)))
+	 (in-environment (member (LaTeX-current-environment) twauctex-electric-environments))
+	 (inhibited-macro (member (TeX-current-macro) twauctex-inhibited-electric-macros))
+         (at-abbrev (twauctex-looking-at-abbrev))
+         (at-electric (looking-back twauctex--electric-regexp twauctex-max-lookback))
+         (at-lastupper (looking-back (concat "[[:upper:]]" twauctex--electric-regexp) (+ twauctex-max-lookback 1))))
     ;; Delete char we inserted to fool (sentence-end)
     (delete-char -1)
     (cond
@@ -340,32 +340,39 @@ If called with ARG, or already at end of line, kill the line instead."
   (and (eq major-mode 'latex-mode)
        (eq (char-before (- (point) 1)) ?\\)))
 
+(defun twauctex--fill-column-hack ()
+  (when twauctex-use-visual-fill-column
+    (visual-fill-column-mode 1)))
+
 ;;;###autoload
 (define-minor-mode twauctex-mode "Extend latex mode to make it easier to write one sentence per line. Makes sentence-end characters (.?!:) electric to insert a newline, and supresses spaces at the beginning of the line."
-  nil
-  " twauc"
-  (list (cons (kbd "_") #'twauctex-underscore-maybe)
-        (cons (kbd "\"") #'twauctex-quote-maybe)
-        (cons (kbd "&") #'twauctex-ampersand-maybe)
-        (cons (kbd "C-c e") #'twauctex-edit-table)
-        (cons (kbd "M-q") #'twauctex-fill-ospl)
-        (cons (kbd "SPC") #'twauctex-electric-sentence-end-space))
-  (when twauctex-mode
-    ;; Activating
-    (auto-fill-mode -1)
-    (visual-line-mode 1)
-    (set (make-local-variable 'fill-nobreak-predicate) #'twauctex-dont-break-on-nbsp)
-    (twauctex--update-abbrev-regexp nil twauctex-non-break-abbrevs 'set nil)
-    (twauctex--update-max-search-bound nil twauctex-non-break-abbrevs 'set nil)
-    (twauctex--update-electric-regexp nil twauctex-electric-regexes 'set nil)
-    ;; We use hack-local-variables, because we want to take the
-    ;; file-local fill column into account when setting the visual
-    ;; fill column.
-    (add-hook 'hack-local-variables-hook
-	      (lambda ()
-                (when twauctex-use-visual-fill-column
-                  (visual-fill-column-mode 1))
-	      nil t))))
+  :init-value nil
+  :lighter " twauc"
+  :keymap (list (cons (kbd "_") #'twauctex-underscore-maybe)
+                (cons (kbd "\"") #'twauctex-quote-maybe)
+                (cons (kbd "&") #'twauctex-ampersand-maybe)
+                (cons (kbd "C-c e") #'twauctex-edit-table)
+                (cons (kbd "M-q") #'twauctex-fill-ospl)
+                (cons (kbd "SPC") #'twauctex-electric-sentence-end-space))
+  (if twauctex-mode
+      (progn
+        ;; Activating
+        (auto-fill-mode -1)
+        (visual-line-mode 1)
+        (set (make-local-variable 'fill-nobreak-predicate) #'twauctex-dont-break-on-nbsp)
+        (twauctex--update-abbrev-regexp nil twauctex-non-break-abbrevs 'set nil)
+        (twauctex--update-max-search-bound nil twauctex-non-break-abbrevs 'set nil)
+        (twauctex--update-electric-regexp nil twauctex-electric-regexes 'set nil)
+        ;; We use hack-local-variables, because we want to take the
+        ;; file-local fill column into account when setting the visual
+        ;; fill column.
+        (add-hook 'hack-local-variables-hook #'twauctex--fill-column-hack nil t ))
+    (progn
+      ;; Deactivating
+      (visual-line-mode -1)
+      (kill-local-variable 'fill-nobreak-predicate)
+      (remove-hook 'hack-local-variables-hook #'twauctex--fill-column-hack))))
+
 ;;;###autoload
 (defun twauctex-enable ()
   "Enable twauctex mode."
