@@ -50,8 +50,8 @@
   :type '(repeat string) :group 'twauctex
   :safe 'listp)
 
-(defcustom twauctex-electric-regexes (list (sentence-end))
-  "Which regexes should end a sentence.
+(defcustom twauctex-extra-electric-regexes '()
+  "Which regexes should end a sentence, in addition to the value of the `sentence-end' function.
 
 Be careful to correctly escape this!" :type '(repeat string) :group 'twauctex)
 
@@ -74,7 +74,7 @@ Be careful to correctly escape this!" :type '(repeat string) :group 'twauctex)
                                         "vs.")
   "A number of case sensitive abbreviations with dots that should not cause the sentence (and thus the line) to end." :type '(repeat string) :group 'twauctex :safe 'listp)
 
-(defcustom twauctex-max-lookback 1 "How far twauctex should look backwards to try and match a sentence ending. Calculate this from the longest possible match to `twauctex-electric-regexes'." :type 'integer)
+(defcustom twauctex-max-lookback 1 "How far twauctex should look backwards to try and match a sentence ending. Calculate this from the longest possible match to `twauctex-extra-electric-regexes'." :type 'integer)
 
 (defcustom twauctex-use-visual-fill-column t "Whether twauctex should automatically enable `visual-fill-column' mode when enabled. Using one-sentence-per-line mode without some sort of visual line breaking is not recommended, as the long lines are very hard to read. Alternatives to `visual-fill-column-mode' exist, so we provide this as an option should you wish to use another visual line breaking mode." :type 'boolean :group 'twauctex :safe 'booleanp)
 
@@ -219,7 +219,7 @@ of an ampersand."
 
 (defvar twauctex--abbrev-regexp nil "Optimized regex to detect abbreviations. Do not modify manually.")
 (defvar twauctex--max-search-bound nil "Maximum length to search backwards for abbreviations. Length of longest abbreviation. Do not modify manually!")
-(defvar twauctex--electric-regexp nil "Alternative of all sentence-ending regexes. Is initialized from `twauctex-electric-regexes'. Do not modify manually!")
+(defvar twauctex--electric-regexp nil "Alternative of all sentence-ending regexes. Is initialized from `twauctex-extra-electric-regexes' and `sentence-end'. Do not modify manually!")
 
 (defun twauctex--update-max-search-bound (symbol newval op where)
   "Update `twauctex--max-search-bound'  when configuration options are updated."
@@ -238,11 +238,11 @@ of an ampersand."
   "Update `twauctex--electric-regexp'  when configuration options are updated."
   (when (eq op 'set)
     (setq twauctex--electric-regexp
-          (s-concat "\\(?:" (s-join "\\|" (mapcar (lambda (regex) (concat "\\(?:" regex "\\)")) newval)) "\\)"))))
+          (s-concat "\\(?:" (s-join "\\|" (mapcar (lambda (regex) (concat "\\(?:" regex "\\)")) (cons (sentence-end) newval))) "\\)"))))
 
 (add-variable-watcher 'twauctex-non-break-abbrevs #'twauctex--update-max-search-bound)
 (add-variable-watcher 'twauctex-non-break-abbrevs #'twauctex--update-abbrev-regexp)
-(add-variable-watcher 'twauctex-electric-regexes #'twauctex--update-electric-regexp)
+(add-variable-watcher 'twauctex-extra-electric-regexes #'twauctex--update-electric-regexp)
 
 ;; OSPL code
 
@@ -362,7 +362,7 @@ If called with ARG, or already at end of line, kill the line instead."
         (set (make-local-variable 'fill-nobreak-predicate) #'twauctex-dont-break-on-nbsp)
         (twauctex--update-abbrev-regexp nil twauctex-non-break-abbrevs 'set nil)
         (twauctex--update-max-search-bound nil twauctex-non-break-abbrevs 'set nil)
-        (twauctex--update-electric-regexp nil twauctex-electric-regexes 'set nil)
+        (twauctex--update-electric-regexp nil twauctex-extra-electric-regexes 'set nil)
         ;; We use hack-local-variables, because we want to take the
         ;; file-local fill column into account when setting the visual
         ;; fill column.
